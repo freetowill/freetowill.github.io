@@ -27,7 +27,7 @@
 <meta property="og:description" content="一、基础概念题1. 简述 LoRA 的原理，和全量微调、冻结微调、Adapter 区别是什么？冻结预训练主干权重$W_0$，在 Transformer 注意力层 Q&#x2F;V 旁增加低秩旁路分支$BA$，仅训练 A、B 两个小矩阵。 前向公式：$W&#x3D;W_0+\frac{\alpha}{r}BA$，用极小参数实现微调，训练结束可把 BA 合并进原权重，推理无额外耗时。 2. LoRA、">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-08-12T08:51:52.000Z">
-<meta property="article:modified_time" content="2026-08-12T09:56:25.285Z">
+<meta property="article:modified_time" content="2026-08-12T09:59:30.601Z">
 <meta property="article:author" content="阿药">
 <meta property="article:tag" content="大模型">
 <meta property="article:tag" content="模型微调">
@@ -528,7 +528,8 @@
 <ul>
 <li>动态加载 LoRA（多 LoRA 热插拔推理，vLLM&#x2F;TGI 常用）<br>原理：基座模型常驻显存不卸载，搭建 LoRA 缓存池；不同用户请求对应不同任务时，从内存中调取对应 LoRA 的 A、B 矩阵，前向传播临时接入旁路计算，不同请求复用同一基座。<br>优点：一套基座支撑上百种任务，显存利用率极高；常用 LoRA 放入显存缓存，毫秒级切换任务；新增业务无需重新部署基座，仅上传 LoRA 文件即可。<br>缺点：推理存在少量算力开销；多 LoRA 并发混跑架构复杂。<br>适用场景：多业务中台场景：一套模型支撑金融、法律、办公问答等多个业务；SaaS 平台、面向多租户的大模型服务；频繁新增、迭代不同领域微调任务。</li>
 </ul>
-<h4 id="3-多任务训练：多个-LoRA-分别对应不同任务，推理时怎么实现动态切换？"><a href="#3-多任务训练：多个-LoRA-分别对应不同任务，推理时怎么实现动态切换？" class="headerlink" title="3. 多任务训练：多个 LoRA 分别对应不同任务，推理时怎么实现动态切换？"></a>3. 多任务训练：多个 LoRA 分别对应不同任务，推理时怎么实现动态切换？</h4><p>基座大模型完整加载进显存并全程常驻、不销毁、不改动主干权重。 不同任务各自单独训练独立 LoRA（每组仅包含对应层的 A、B 矩阵，体积 MB 级别）。 推理服务维护 LoRA 缓存池，根据请求所属任务 ID，绑定对应的 LoRA 参与前向计算，实现任务切换。<br>实现步骤：</p>
+<h4 id="3-多任务训练：多个-LoRA-分别对应不同任务，推理时怎么实现动态切换？"><a href="#3-多任务训练：多个-LoRA-分别对应不同任务，推理时怎么实现动态切换？" class="headerlink" title="3. 多任务训练：多个 LoRA 分别对应不同任务，推理时怎么实现动态切换？"></a>3. 多任务训练：多个 LoRA 分别对应不同任务，推理时怎么实现动态切换？</h4><p>基座大模型完整加载进显存并全程常驻、不销毁、不改动主干权重。 不同任务各自单独训练独立 LoRA（每组仅包含对应层的 A、B 矩阵，体积 MB 级别）。 推理服务维护 LoRA 缓存池，根据请求所属任务 ID，绑定对应的 LoRA 参与前向计算，实现任务切换。</p>
+<p>实现步骤：</p>
 <ol>
 <li>基座常驻内存：启动推理服务（vLLM、TGI、Text-Inference、FastChat）时，只加载一次原始基座模型，全程驻留在 GPU 显存，不会反复加载几十 GB 的大模型。</li>
 <li>LoRA 分级缓存机制</li>
